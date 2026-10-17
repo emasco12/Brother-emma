@@ -1,0 +1,44 @@
+
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold & FX Intelligence</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div><h1>Gold & FX Intelligence</h1><p>Multi-timeframe fundamental + technical market engine</p></div>
+<div class="pill">MVP • Decision support</div></header>
+<main>
+<section class="controls">
+<select id="symbol"></select><button onclick="run()">Analyze</button><button onclick="scan()">Scan all pairs</button>
+<span id="status"></span>
+</section>
+<section id="hero" class="grid"></section>
+<section><h2>Multi-timeframe alignment</h2><div id="tf" class="tfgrid"></div></section>
+<section><h2>Intelligence breakdown</h2><div id="breakdown" class="grid"></div></section>
+<section><h2>Market scanner</h2><div id="table"></div></section>
+<section class="note"><b>Important:</b> This is an MVP research/decision-support engine, not financial advice. Fundamental fields are neutral until connected to licensed macro/news data. Do not trade from a score alone.</section>
+</main>
+<script>
+const symbols={{ symbols|tojson }};
+const sel=document.getElementById('symbol'); symbols.forEach(s=>sel.add(new Option(s,s)));
+sel.value="XAUUSD";
+const $=id=>document.getElementById(id);
+function card(t,v,c=""){return `<div class="card ${c}"><div class="muted">${t}</div><div class="big">${v}</div></div>`}
+async function run(){
+ $("status").textContent="Loading…";
+ const r=await fetch('/api/analyze/'+sel.value); const d=await r.json();
+ $("status").textContent="";
+ $("hero").innerHTML=card(d.symbol,d.bias,d.bias==="BUY"?"buy":d.bias==="SELL"?"sell":"wait")+card("Overall score",d.score+"/100")+card("Confidence",d.confidence+"%")+card("Price",d.price??"—");
+ $("tf").innerHTML=Object.entries(d.timeframes).map(([k,v])=>`<div class="tf"><b>${k}</b><strong>${v.score}</strong><span>RSI ${v.rsi}</span><span>${v.trend>=0?"Bullish":"Bearish"}</span></div>`).join("");
+ $("breakdown").innerHTML=card("Fundamental",d.fundamental+"/100")+card("Technical MTF",d.technical+"/100")+card("Model note",d.reasons.join(" • "));
+}
+async function scan(){
+ $("table").innerHTML="<p>Scanning…</p>"; const rows=await (await fetch('/api/scan')).json();
+ $("table").innerHTML=`<table><tr><th>Pair</th><th>Bias</th><th>Score</th><th>Confidence</th><th>Fundamental</th><th>Technical</th></tr>`+
+ rows.map(d=>`<tr><td>${d.symbol}</td><td class="${d.bias.toLowerCase()}">${d.bias}</td><td>${d.score}</td><td>${d.confidence}%</td><td>${d.fundamental}</td><td>${d.technical}</td></tr>`).join("")+"</table>";
+}
+run();
+</script>
+</body></html>
